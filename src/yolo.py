@@ -1,14 +1,16 @@
+from typing import Optional
 from ultralytics import YOLO
+from src.utils import Config
 
-def get_model() -> YOLO:
+def get_model(config: Config) -> tuple[YOLO, Optional[dict]]:
     """
     Load pretrained YOLO model and train it further with another dataset.
+    :param config: The model configuration.
     :return: The trained model.
     """
 
-    # alternatively .yaml for just architecture
-    model = YOLO("yolo26n.pt")
-    # other dataset
-    model.train(data="coco.yaml", epochs=50)
+    model = YOLO(config.model)
+    # ** dictionary unpacking
+    result = model.train(**config.to_dict())
 
-    return model
+    return model, result
