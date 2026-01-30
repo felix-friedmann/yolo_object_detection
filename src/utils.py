@@ -83,26 +83,34 @@ class Config:
         return dic
 
 
-def log_training(result: Optional[dict], train_config: Config):
+def log_training(result, train_config: Config):
     """
     Logs the training result.
     :param result: The training result.
     :param train_config: The training config.
     """
 
+    logger = get_logger(__name__)
     if result is None:
-        logger = get_logger(__name__)
         logger.error("Training result is None")
         exit(1)
 
     mlflow.log_params(train_config.to_dict())
 
+    metrics = result.results_dict()
     mlflow.log_metrics({
-        "mAP50": result.get('metrics/mAP50(B)', 0),
-        "mAP50-95": result.get('metrics/mAP50-95(B)', 0),
-        "precision": result.get('metrics/precision(B)', 0),
-        "recall": result.get('metrics/recall(B)', 0)
+        "mAP50": metrics.get('metrics/mAP50(B)', 0),
+        "mAP50-95": metrics.get('metrics/mAP50-95(B)', 0),
+        "precision": metrics.get('metrics/precision(B)', 0),
+        "recall": metrics.get('metrics/recall(B)', 0)
     })
 
-    weights_path = Path(result["save_dir"]) / "weights" / "best.pt"
-    mlflow.log_artifact(str(weights_path), artifact_path="model")
+    if "save_dir" in metrics:
+        weights_path = Path(metrics["save_dir"]) / "weights" / "best.pt"
+    else:
+        weights_path = Path(f"runs/detect/{train_config.name}/weights/best.pt")
+
+    if weights_path.exists():
+        mlflow.log_artifact(str(weights_path), artifact_path="model")
+    else:
+        logger.error(f"Weights not found at {weights_path}")
